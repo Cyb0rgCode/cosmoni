@@ -5,6 +5,7 @@ import { AppState, Client } from "./types";
 
 let clients: Client[] = [];
 let activeTrimesterId = "";
+let posts: string[] = [];
 let loaded = false;
 let inFlight: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -39,6 +40,7 @@ function fetchState(): Promise<void> {
         const state = data as AppState;
         clients = state.clients;
         activeTrimesterId = state.activeTrimesterId;
+        posts = state.posts;
         loaded = true;
         emit();
       })
@@ -71,6 +73,10 @@ function getActiveTrimesterId(): string {
   return activeTrimesterId;
 }
 
+function getPosts(): string[] {
+  return posts;
+}
+
 export function useClients(): Client[] {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
@@ -81,6 +87,12 @@ export function useClientsLoaded(): boolean {
 
 export function useActiveTrimesterId(): string {
   return useSyncExternalStore(subscribe, getActiveTrimesterId, () => "");
+}
+
+const EMPTY_POSTS: string[] = [];
+
+export function usePosts(): string[] {
+  return useSyncExternalStore(subscribe, getPosts, () => EMPTY_POSTS);
 }
 
 export async function addClient(input: {
@@ -119,6 +131,24 @@ export function markPaid(id: string): Promise<void> {
 
 export function markUnpaid(id: string): Promise<void> {
   return updateClient(id, { paid: false, paidAt: null });
+}
+
+export async function addPost(name: string): Promise<void> {
+  const result = (await api("/api/posts", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  })) as { posts: string[] };
+  posts = result.posts;
+  emit();
+}
+
+export async function deletePost(name: string): Promise<void> {
+  const result = (await api("/api/posts", {
+    method: "DELETE",
+    body: JSON.stringify({ name }),
+  })) as { posts: string[] };
+  posts = result.posts;
+  emit();
 }
 
 /** Switches the app's active trimester. Unpaid clients carry their owed amount forward. */

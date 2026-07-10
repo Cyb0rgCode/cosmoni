@@ -8,6 +8,8 @@ A simple installable PWA for tracking clients and their trimester payments. Buil
 - **Dashboard** — totals for paid/unpaid clients, amount collected, amount outstanding, and overdue clients.
 - **Clients** — card view or list view (toggle in the top bar), with search and paid/unpaid filters.
 - Track per client: name, post/role, phone number, Instagram username, and payment status.
+- **Sorting**: sort the client list by name (A–Z/Z–A), amount due, status (overdue first), or date added.
+- **Posts**: pick a client's post from a managed list (seeded with common committee roles), with an in-form "Manage" screen to add or delete posts from that list.
 - **Trimester cycle**: billing periods run Jul–Sep, Oct–Dec, Jan–Mar, Apr–Jun (anchored on July). The Dashboard shows the active trimester with a selector to switch to a nearby one.
 - **Pricing logic**: 25 DT per trimester. If a client hasn't paid within 20 days of the trimester start, the rate becomes 35 DT.
 - **Compounding penalty**: switching to a new trimester resets everyone to unpaid, but any client who was still unpaid carries their full owed amount (fee + prior carry-over) into the new trimester, stacking on top of that period's fee. Paying in full clears the carry-over.

@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { usePosts } from "@/lib/store";
 import { Client, ClientInput } from "@/lib/types";
+import ManagePostsModal from "./ManagePostsModal";
 
 const emptyForm: ClientInput = { name: "", post: "", phone: "", instagram: "" };
 
@@ -16,11 +18,15 @@ export default function ClientFormModal({
   onSubmit: (input: ClientInput) => void;
   saving?: boolean;
 }) {
+  const posts = usePosts();
   const [form, setForm] = useState<ClientInput>(() =>
     client
       ? { name: client.name, post: client.post, phone: client.phone, instagram: client.instagram }
       : emptyForm
   );
+  const [showManagePosts, setShowManagePosts] = useState(false);
+
+  const postOptions = form.post && !posts.includes(form.post) ? [form.post, ...posts] : posts;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -55,13 +61,32 @@ export default function ClientFormModal({
             />
           </Field>
 
-          <Field label="Post / role">
-            <input
+          <Field
+            label="Post"
+            action={
+              <button
+                type="button"
+                onClick={() => setShowManagePosts(true)}
+                className="text-xs font-medium text-indigo-600 dark:text-indigo-400"
+              >
+                Manage
+              </button>
+            }
+          >
+            <select
               value={form.post}
               onChange={(e) => setForm({ ...form, post: e.target.value })}
-              className={inputClasses}
-              placeholder="e.g. Coach, Model, Athlete"
-            />
+              className={`${inputClasses} appearance-none`}
+            >
+              <option value="" className="text-zinc-900">
+                — No post —
+              </option>
+              {postOptions.map((post) => (
+                <option key={post} value={post} className="text-zinc-900">
+                  {post}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Phone number">
@@ -107,6 +132,8 @@ export default function ClientFormModal({
           </div>
         </form>
       </div>
+
+      {showManagePosts && <ManagePostsModal onClose={() => setShowManagePosts(false)} />}
     </div>
   );
 }
@@ -114,11 +141,22 @@ export default function ClientFormModal({
 const inputClasses =
   "w-full rounded-xl border border-black/10 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-indigo-500 dark:border-white/10 dark:text-zinc-50";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</span>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</span>
+        {action}
+      </div>
       {children}
-    </label>
+    </div>
   );
 }

@@ -20,4 +20,5 @@ export type ClientInput = Pick<Client, "name" | "post" | "phone" | "instagram">;
 export interface AppState {
   activeTrimesterId: string;
   clients: Client[];
+  posts: string[];
 }
