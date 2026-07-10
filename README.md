@@ -15,6 +15,7 @@ A simple installable PWA for tracking clients and their trimester payments. Buil
 - **Compounding penalty**: advancing to a *new* trimester (one that hasn't happened yet) is the only time anything is calculated. Anyone still unpaid when the closing trimester ends carries a flat 35 DT penalty into the new one, stacking with any earlier unpaid balance, on top of the new trimester's own 25/35 DT fee. Paying in full resets that client's carry-over to 0. New clients are only ever added to the current trimester going forward — they don't retroactively appear in past ones. Past trimester records can still be corrected (e.g. fixing a missed "mark as paid"), but corrections never ripple forward into later trimesters' totals.
 - **PWA**: installable on mobile home screens, with an app-shell service worker for fast loads.
 - **Cloud storage**: all client records live in a single JSON file in Vercel Blob — no localStorage, accessible from any device.
+- **Backup/restore**: small "Export data" / "Import data" links at the bottom of the Dashboard. Export downloads the full backing data (every client, every trimester's payment history, and the posts list) as JSON; Import replaces all current data with the contents of a previously exported file, behind a confirmation.
 
 ## Environment variables
 

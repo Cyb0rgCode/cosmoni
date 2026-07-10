@@ -44,7 +44,15 @@ function defaultState(): RawAppState {
   };
 }
 
-function normalize(data: unknown): RawAppState {
+/** True if `data` at least resembles a Cosmoni backup (current or legacy shape). */
+export function looksLikeBackup(data: unknown): boolean {
+  if (Array.isArray(data)) return true; // legacy flat clients array
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  return Array.isArray(obj.clients) || typeof obj.trimesters === "object";
+}
+
+export function normalize(data: unknown): RawAppState {
   if (!data || typeof data !== "object") return defaultState();
 
   // Legacy shape from before the trimester system existed: a bare array of clients.

@@ -196,3 +196,11 @@ export async function switchTrimester(trimesterId: string): Promise<void> {
   applyState(state);
   emit();
 }
+
+/** Replaces all data (clients, payment history, posts) with the contents of a backup file. */
+export async function importData(data: unknown): Promise<void> {
+  await api("/api/import", { method: "POST", body: JSON.stringify(data) });
+  const state = (await api("/api/state")) as AppState;
+  applyState(state);
+  emit();
+}

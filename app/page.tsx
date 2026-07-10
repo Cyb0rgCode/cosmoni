@@ -9,6 +9,7 @@ import StatCard from "@/components/StatCard";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "@/components/ThemeToggle";
 import TrimesterSelector from "@/components/TrimesterSelector";
+import DataBackup from "@/components/DataBackup";
 
 export default function DashboardPage() {
   const clients = useClients();
@@ -125,6 +126,8 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
+
+      <DataBackup />
     </main>
   );
 }
