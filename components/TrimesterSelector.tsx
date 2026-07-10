@@ -2,20 +2,31 @@
 
 import { useMemo, useState } from "react";
 import { useActiveTrimesterId, useLatestTrimesterId, switchTrimester } from "@/lib/store";
-import { currentTrimesterId, nearbyTrimesterIds, trimesterFromId, trimesterDistance } from "@/lib/trimester";
+import {
+  currentTrimesterId,
+  trimesterDistance,
+  trimesterFromId,
+  trimesterRange,
+  trimesterShortLabel,
+  EPOCH_TRIMESTER_ID,
+} from "@/lib/trimester";
+
+const VISIBLE_COUNT = 4;
 
 export default function TrimesterSelector() {
   const activeTrimesterId = useActiveTrimesterId();
   const latestTrimesterId = useLatestTrimesterId();
   const [switching, setSwitching] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const today = currentTrimesterId();
 
-  const options = useMemo(() => {
-    if (!activeTrimesterId) return [];
-    return nearbyTrimesterIds(today, 5, 1, [activeTrimesterId, latestTrimesterId]).map((id) =>
-      trimesterFromId(id)
-    );
-  }, [activeTrimesterId, latestTrimesterId, today]);
+  const history = useMemo(() => {
+    if (!latestTrimesterId) return [];
+    return trimesterRange(EPOCH_TRIMESTER_ID, latestTrimesterId);
+  }, [latestTrimesterId]);
+
+  const hasMore = history.length > VISIBLE_COUNT;
+  const visible = showAll ? history : history.slice(-VISIBLE_COUNT);
 
   async function handleSwitch(nextId: string) {
     if (!nextId || nextId === activeTrimesterId) return;
@@ -50,28 +61,38 @@ export default function TrimesterSelector() {
 
   return (
     <div className="rounded-2xl border border-black/10 p-4 dark:border-white/10">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            {viewingHistory ? "Viewing history" : "Active trimester"}
-          </p>
-          <p className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            {trimesterFromId(activeTrimesterId).label}
-          </p>
-        </div>
-        <select
-          value={activeTrimesterId}
-          disabled={switching}
-          onChange={(e) => handleSwitch(e.target.value)}
-          className="rounded-xl border border-black/10 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-500 disabled:opacity-60 dark:border-white/10 dark:text-zinc-50"
-        >
-          {options.map((t) => (
-            <option key={t.id} value={t.id} className="text-zinc-900">
-              {t.label}
-              {t.id > latestTrimesterId ? " (new)" : ""}
-            </option>
-          ))}
-        </select>
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        {viewingHistory ? "Viewing history" : "Active trimester"}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        {trimesterFromId(activeTrimesterId).label}
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium text-zinc-500 dark:border-white/10 dark:text-zinc-400"
+          >
+            {showAll ? "Less" : "More"}
+          </button>
+        )}
+        {visible.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => handleSwitch(id)}
+            disabled={switching}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
+              id === activeTrimesterId
+                ? "bg-indigo-600 text-white"
+                : "bg-black/5 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
+            }`}
+          >
+            {trimesterShortLabel(id)}
+          </button>
+        ))}
       </div>
 
       {viewingHistory && (

@@ -68,24 +68,23 @@ export function trimesterDistance(fromId: string, toId: string): number {
   return Math.round(months / 3);
 }
 
-/**
- * Returns nearby trimester ids centered on `centerId`, oldest first, clamped to never
- * predate EPOCH_TRIMESTER_ID. Always includes any ids in `extraIds`.
- */
-export function nearbyTrimesterIds(
-  centerId: string,
-  before: number,
-  after: number,
-  extraIds: string[] = []
-): string[] {
+/** All trimester ids from `fromId` to `toId` inclusive, ascending. Both must be valid trimester ids. */
+export function trimesterRange(fromId: string, toId: string): string[] {
   const ids: string[] = [];
-  for (let i = -before; i <= after; i++) {
-    ids.push(shiftTrimesterId(centerId, i));
+  let cursor = fromId;
+  let guard = 0;
+  while (cursor <= toId && guard < 400) {
+    ids.push(cursor);
+    if (cursor === toId) break;
+    cursor = shiftTrimesterId(cursor, 1);
+    guard += 1;
   }
-  for (const extra of extraIds) {
-    if (extra && !ids.includes(extra)) ids.push(extra);
-  }
-  return Array.from(new Set(ids))
-    .filter((id) => id >= EPOCH_TRIMESTER_ID)
-    .sort();
+  return ids;
+}
+
+/** Compact label for chips, e.g. "Jul '26". */
+export function trimesterShortLabel(id: string): string {
+  const { start } = trimesterFromId(id);
+  const yy = String(start.getFullYear()).slice(-2);
+  return `${MONTH_SHORT[start.getMonth()]} '${yy}`;
 }
