@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useClients } from "@/lib/store";
+import { useClients, useClientsLoaded } from "@/lib/store";
 import { amountDue, paymentStatus } from "@/lib/payment";
 import { formatDT } from "@/lib/format";
 import StatCard from "@/components/StatCard";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function DashboardPage() {
   const clients = useClients();
+  const loaded = useClientsLoaded();
 
   const stats = useMemo(() => {
     let paidCount = 0;
@@ -43,11 +45,14 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-8 pt-6 sm:px-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-          {clients.length} client{clients.length === 1 ? "" : "s"} total
-        </p>
+      <header className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Dashboard</h1>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            {loaded ? `${clients.length} client${clients.length === 1 ? "" : "s"} total` : "Loading..."}
+          </p>
+        </div>
+        <LogoutButton />
       </header>
 
       <section className="grid grid-cols-2 gap-3">
@@ -74,7 +79,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {attention.length === 0 ? (
+        {!loaded ? (
+          <div className="rounded-2xl border border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+            Loading...
+          </div>
+        ) : attention.length === 0 ? (
           <div className="rounded-2xl border border-black/10 p-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
             {clients.length === 0 ? (
               <>

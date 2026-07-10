@@ -1,7 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useClients, addClient, updateClient, deleteClient, markPaid, renewTrimester } from "@/lib/store";
+import {
+  useClients,
+  useClientsLoaded,
+  addClient,
+  updateClient,
+  deleteClient,
+  markPaid,
+  renewTrimester,
+} from "@/lib/store";
 import { paymentStatus, PaymentStatus } from "@/lib/payment";
 import { Client, ClientInput } from "@/lib/types";
 import ClientCard from "@/components/ClientCard";
@@ -11,13 +19,20 @@ import ClientFormModal from "@/components/ClientFormModal";
 type ViewMode = "card" | "list";
 type Filter = "all" | "unpaid" | "paid";
 
+function reportError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Something went wrong";
+  alert(message);
+}
+
 export default function ClientsPage() {
   const clients = useClients();
+  const loaded = useClientsLoaded();
   const [view, setView] = useState<ViewMode>("card");
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -41,19 +56,29 @@ export default function ClientsPage() {
     setShowForm(true);
   }
 
-  function handleSubmit(input: ClientInput) {
-    if (editing) {
-      updateClient(editing.id, input);
-    } else {
-      addClient(input);
+  async function handleSubmit(input: ClientInput) {
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateClient(editing.id, input);
+      } else {
+        await addClient(input);
+      }
+      setShowForm(false);
+      setEditing(null);
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setSaving(false);
     }
-    setShowForm(false);
-    setEditing(null);
   }
 
-  function handleDelete(client: Client) {
-    if (confirm(`Delete ${client.name}? This can't be undone.`)) {
-      deleteClient(client.id);
+  async function handleDelete(client: Client) {
+    if (!confirm(`Delete ${client.name}? This can't be undone.`)) return;
+    try {
+      await deleteClient(client.id);
+    } catch (error) {
+      reportError(error);
     }
   }
 
@@ -104,7 +129,11 @@ export default function ClientsPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {!loaded ? (
+        <div className="rounded-2xl border border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+          Loading clients...
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-black/10 p-8 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
           {clients.length === 0 ? "No clients yet — tap Add to create one." : "No clients match your search."}
         </div>
@@ -116,8 +145,8 @@ export default function ClientsPage() {
               client={client}
               onEdit={() => openEdit(client)}
               onDelete={() => handleDelete(client)}
-              onTogglePaid={() => markPaid(client.id)}
-              onRenew={() => renewTrimester(client.id)}
+              onTogglePaid={() => markPaid(client.id).catch(reportError)}
+              onRenew={() => renewTrimester(client.id).catch(reportError)}
             />
           ))}
         </div>
@@ -129,8 +158,8 @@ export default function ClientsPage() {
               client={client}
               onEdit={() => openEdit(client)}
               onDelete={() => handleDelete(client)}
-              onTogglePaid={() => markPaid(client.id)}
-              onRenew={() => renewTrimester(client.id)}
+              onTogglePaid={() => markPaid(client.id).catch(reportError)}
+              onRenew={() => renewTrimester(client.id).catch(reportError)}
             />
           ))}
         </div>
@@ -145,6 +174,7 @@ export default function ClientsPage() {
             setEditing(null);
           }}
           onSubmit={handleSubmit}
+          saving={saving}
         />
       )}
     </main>

@@ -11,6 +11,8 @@ const items = [
 export default function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname === "/login") return null;
+
   return (
     <nav className="sticky bottom-0 z-20 border-t border-black/10 bg-white/90 backdrop-blur pb-[env(safe-area-inset-bottom)] dark:border-white/10 dark:bg-black/80">
       <ul className="mx-auto flex max-w-3xl">

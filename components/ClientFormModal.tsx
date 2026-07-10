@@ -9,10 +9,12 @@ export default function ClientFormModal({
   client,
   onClose,
   onSubmit,
+  saving,
 }: {
   client: Client | null;
   onClose: () => void;
   onSubmit: (input: ClientInput) => void;
+  saving?: boolean;
 }) {
   const [form, setForm] = useState<ClientInput>(() =>
     client
@@ -90,15 +92,17 @@ export default function ClientFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-black/10 py-2.5 text-sm font-medium text-zinc-700 dark:border-white/10 dark:text-zinc-300"
+              disabled={saving}
+              className="flex-1 rounded-xl border border-black/10 py-2.5 text-sm font-medium text-zinc-700 disabled:opacity-60 dark:border-white/10 dark:text-zinc-300"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white"
+              disabled={saving}
+              className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {client ? "Save changes" : "Add client"}
+              {saving ? "Saving..." : client ? "Save changes" : "Add client"}
             </button>
           </div>
         </form>

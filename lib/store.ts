@@ -1,42 +1,58 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Client, ClientInput } from "./types";
-
-const STORAGE_KEY = "cosmoni.clients.v1";
+import { Client } from "./types";
 
 let clients: Client[] = [];
-let hydrated = false;
+let loaded = false;
+let inFlight: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
   for (const listener of listeners) listener();
 }
 
-function load() {
-  if (hydrated || typeof window === "undefined") return;
-  hydrated = true;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    clients = raw ? (JSON.parse(raw) as Client[]) : [];
-  } catch {
-    clients = [];
+async function api(path: string, options?: RequestInit) {
+  const res = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+
+  if (res.status === 401) {
+    window.location.href = "/login";
+    throw new Error("Session expired");
   }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error ?? "Request failed");
+  }
+
+  return res.status === 204 ? null : res.json();
 }
 
-function persist() {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-  emit();
+function fetchClients(): Promise<void> {
+  if (!inFlight) {
+    inFlight = api("/api/clients")
+      .then((data) => {
+        clients = data as Client[];
+        loaded = true;
+        emit();
+      })
+      .finally(() => {
+        inFlight = null;
+      });
+  }
+  return inFlight;
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
+  if (!loaded) fetchClients();
   return () => listeners.delete(listener);
 }
 
 function getSnapshot(): Client[] {
-  load();
   return clients;
 }
 
@@ -44,71 +60,61 @@ function getServerSnapshot(): Client[] {
   return [];
 }
 
-function uid(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function addClient(input: ClientInput): Client {
-  load();
-  const now = new Date().toISOString();
-  const client: Client = {
-    id: uid(),
-    ...input,
-    trimesterStart: now,
-    paid: false,
-    paidAt: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-  clients = [client, ...clients];
-  persist();
-  return client;
-}
-
-export function updateClient(id: string, patch: Partial<ClientInput>) {
-  load();
-  clients = clients.map((c) =>
-    c.id === id ? { ...c, ...patch, updatedAt: new Date().toISOString() } : c
-  );
-  persist();
-}
-
-export function deleteClient(id: string) {
-  load();
-  clients = clients.filter((c) => c.id !== id);
-  persist();
-}
-
-export function markPaid(id: string) {
-  load();
-  const now = new Date().toISOString();
-  clients = clients.map((c) =>
-    c.id === id ? { ...c, paid: true, paidAt: now, updatedAt: now } : c
-  );
-  persist();
-}
-
-export function markUnpaid(id: string) {
-  load();
-  const now = new Date().toISOString();
-  clients = clients.map((c) =>
-    c.id === id ? { ...c, paid: false, paidAt: null, updatedAt: now } : c
-  );
-  persist();
-}
-
-/** Starts a fresh trimester cycle for the client (e.g. after renewal). */
-export function renewTrimester(id: string) {
-  load();
-  const now = new Date().toISOString();
-  clients = clients.map((c) =>
-    c.id === id
-      ? { ...c, trimesterStart: now, paid: false, paidAt: null, updatedAt: now }
-      : c
-  );
-  persist();
+function getLoaded(): boolean {
+  return loaded;
 }
 
 export function useClients(): Client[] {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+export function useClientsLoaded(): boolean {
+  return useSyncExternalStore(subscribe, getLoaded, () => false);
+}
+
+export async function addClient(input: {
+  name: string;
+  post: string;
+  phone: string;
+  instagram: string;
+}): Promise<Client> {
+  const client = (await api("/api/clients", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })) as Client;
+  clients = [client, ...clients];
+  emit();
+  return client;
+}
+
+export async function updateClient(id: string, patch: Partial<Client>): Promise<void> {
+  const updated = (await api(`/api/clients/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  })) as Client;
+  clients = clients.map((c) => (c.id === id ? updated : c));
+  emit();
+}
+
+export async function deleteClient(id: string): Promise<void> {
+  await api(`/api/clients/${id}`, { method: "DELETE" });
+  clients = clients.filter((c) => c.id !== id);
+  emit();
+}
+
+export function markPaid(id: string): Promise<void> {
+  return updateClient(id, { paid: true, paidAt: new Date().toISOString() });
+}
+
+export function markUnpaid(id: string): Promise<void> {
+  return updateClient(id, { paid: false, paidAt: null });
+}
+
+/** Starts a fresh trimester cycle for the client (e.g. after renewal). */
+export function renewTrimester(id: string): Promise<void> {
+  return updateClient(id, {
+    trimesterStart: new Date().toISOString(),
+    paid: false,
+    paidAt: null,
+  });
 }
