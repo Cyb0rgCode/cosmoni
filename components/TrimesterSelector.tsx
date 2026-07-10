@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useActiveTrimesterId, useLatestTrimesterId, useTodayTrimesterId, switchTrimester } from "@/lib/store";
 import {
   shiftTrimesterId,
-  trimesterDistance,
   trimesterFromId,
   trimesterRange,
   trimesterShortLabel,
@@ -36,19 +35,6 @@ export default function TrimesterSelector() {
 
   async function handleSwitch(nextId: string) {
     if (!nextId || nextId === activeTrimesterId) return;
-
-    // Advancing beyond the frontier creates new data and needs confirmation.
-    // Switching to an already-recorded trimester is just a view — nothing to confirm.
-    if (nextId > latestTrimesterId) {
-      const steps = trimesterDistance(latestTrimesterId, nextId);
-      const label = trimesterFromId(nextId).label;
-      const confirmed = confirm(
-        steps > 1
-          ? `Advance ${steps} trimesters to ${label}?\n\nAt each step, clients still unpaid carry a flat 35 DT penalty forward, stacking with anything already owed.`
-          : `Start the ${label} trimester?\n\nClients still unpaid when ${trimesterFromId(latestTrimesterId).label} closes carry a flat 35 DT penalty into this new trimester, on top of anything already owed.`
-      );
-      if (!confirmed) return;
-    }
 
     setSwitching(true);
     try {
