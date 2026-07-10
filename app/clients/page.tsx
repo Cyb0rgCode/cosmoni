@@ -11,6 +11,7 @@ import {
   markUnpaid,
 } from "@/lib/store";
 import { paymentStatus, PaymentStatus } from "@/lib/payment";
+import { sortClients, SORT_OPTIONS, SortKey } from "@/lib/sort";
 import { Client, ClientInput } from "@/lib/types";
 import ClientCard from "@/components/ClientCard";
 import ClientListRow from "@/components/ClientListRow";
@@ -30,6 +31,7 @@ export default function ClientsPage() {
   const loaded = useClientsLoaded();
   const [view, setView] = useState<ViewMode>("card");
   const [filter, setFilter] = useState<Filter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("name-asc");
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
@@ -37,7 +39,7 @@ export default function ClientsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return clients.filter((c) => {
+    const results = clients.filter((c) => {
       if (q && !`${c.name} ${c.post} ${c.instagram} ${c.phone}`.toLowerCase().includes(q)) {
         return false;
       }
@@ -45,7 +47,8 @@ export default function ClientsPage() {
       const status: PaymentStatus = paymentStatus(c);
       return filter === "paid" ? status === "paid" : status !== "paid";
     });
-  }, [clients, query, filter]);
+    return sortClients(results, sortKey);
+  }, [clients, query, filter, sortKey]);
 
   function openAdd() {
     setEditing(null);
@@ -117,20 +120,35 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        {(["all", "unpaid", "paid"] as Filter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-colors ${
-              filter === f
-                ? "bg-indigo-600 text-white"
-                : "bg-black/5 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-2">
+          {(["all", "unpaid", "paid"] as Filter[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-colors ${
+                filter === f
+                  ? "bg-indigo-600 text-white"
+                  : "bg-black/5 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          aria-label="Sort clients"
+          className="rounded-full border border-black/10 bg-transparent px-3 py-1.5 text-xs font-medium text-zinc-600 outline-none focus:border-indigo-500 dark:border-white/10 dark:text-zinc-300"
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value} className="text-zinc-900">
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {!loaded ? (
