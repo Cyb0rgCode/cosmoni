@@ -8,7 +8,7 @@ import {
   updateClient,
   deleteClient,
   markPaid,
-  renewTrimester,
+  markUnpaid,
 } from "@/lib/store";
 import { paymentStatus, PaymentStatus } from "@/lib/payment";
 import { Client, ClientInput } from "@/lib/types";
@@ -150,7 +150,7 @@ export default function ClientsPage() {
               onEdit={() => openEdit(client)}
               onDelete={() => handleDelete(client)}
               onTogglePaid={() => markPaid(client.id).catch(reportError)}
-              onRenew={() => renewTrimester(client.id).catch(reportError)}
+              onMarkUnpaid={() => markUnpaid(client.id).catch(reportError)}
             />
           ))}
         </div>
@@ -163,7 +163,7 @@ export default function ClientsPage() {
               onEdit={() => openEdit(client)}
               onDelete={() => handleDelete(client)}
               onTogglePaid={() => markPaid(client.id).catch(reportError)}
-              onRenew={() => renewTrimester(client.id).catch(reportError)}
+              onMarkUnpaid={() => markUnpaid(client.id).catch(reportError)}
             />
           ))}
         </div>

@@ -1,12 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { readClients, writeClients } from "@/lib/blob-store";
+import { readState, writeState } from "@/lib/blob-store";
+import { trimesterFromId } from "@/lib/trimester";
 import { Client, ClientInput } from "@/lib/types";
-
-export async function GET() {
-  const clients = await readClients();
-  return NextResponse.json(clients);
-}
 
 export async function POST(request: NextRequest) {
   const input = (await request.json().catch(() => null)) as Partial<ClientInput> | null;
@@ -15,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const clients = await readClients();
+  const state = await readState();
   const now = new Date().toISOString();
   const client: Client = {
     id: randomUUID(),
@@ -23,13 +19,15 @@ export async function POST(request: NextRequest) {
     post: input.post?.trim() ?? "",
     phone: input.phone?.trim() ?? "",
     instagram: (input.instagram ?? "").trim().replace(/^@/, ""),
-    trimesterStart: now,
+    trimesterStart: trimesterFromId(state.activeTrimesterId).start.toISOString(),
     paid: false,
     paidAt: null,
+    carriedOver: 0,
     createdAt: now,
     updatedAt: now,
   };
 
-  await writeClients([client, ...clients]);
+  state.clients = [client, ...state.clients];
+  await writeState(state);
   return NextResponse.json(client, { status: 201 });
 }

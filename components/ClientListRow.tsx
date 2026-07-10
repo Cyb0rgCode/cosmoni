@@ -10,13 +10,13 @@ export default function ClientListRow({
   onEdit,
   onDelete,
   onTogglePaid,
-  onRenew,
+  onMarkUnpaid,
 }: {
   client: Client;
   onEdit: () => void;
   onDelete: () => void;
   onTogglePaid: () => void;
-  onRenew: () => void;
+  onMarkUnpaid: () => void;
 }) {
   const status = paymentStatus(client);
   const due = amountDue(client);
@@ -38,15 +38,25 @@ export default function ClientListRow({
 
       <div className="flex shrink-0 items-center gap-2">
         <div className="text-right">
-          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{formatDT(due)}</p>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            {formatDT(due)}
+            {client.carriedOver > 0 && (
+              <span
+                className="ml-1 text-rose-600 dark:text-rose-400"
+                title={`Includes ${formatDT(client.carriedOver)} carried over`}
+              >
+                *
+              </span>
+            )}
+          </p>
           <StatusBadge status={status} />
         </div>
         {status === "paid" ? (
           <button
-            onClick={onRenew}
+            onClick={onMarkUnpaid}
             className="rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:border-white/10 dark:text-zinc-300"
           >
-            Renew
+            Undo
           </button>
         ) : (
           <button

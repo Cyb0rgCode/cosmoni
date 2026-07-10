@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readClients, writeClients } from "@/lib/blob-store";
+import { readState, writeState } from "@/lib/blob-store";
 import { Client } from "@/lib/types";
 
 export async function PATCH(
@@ -12,21 +12,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const clients = await readClients();
-  const index = clients.findIndex((c) => c.id === id);
+  const state = await readState();
+  const index = state.clients.findIndex((c) => c.id === id);
   if (index === -1) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const updated: Client = {
-    ...clients[index],
+    ...state.clients[index],
     ...patch,
-    id: clients[index].id,
-    createdAt: clients[index].createdAt,
+    id: state.clients[index].id,
+    createdAt: state.clients[index].createdAt,
     updatedAt: new Date().toISOString(),
   };
-  clients[index] = updated;
-  await writeClients(clients);
+  state.clients[index] = updated;
+  await writeState(state);
   return NextResponse.json(updated);
 }
 
@@ -35,12 +35,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const clients = await readClients();
-  const filtered = clients.filter((c) => c.id !== id);
-  if (filtered.length === clients.length) {
+  const state = await readState();
+  const filtered = state.clients.filter((c) => c.id !== id);
+  if (filtered.length === state.clients.length) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await writeClients(filtered);
+  state.clients = filtered;
+  await writeState(state);
   return NextResponse.json({ ok: true });
 }

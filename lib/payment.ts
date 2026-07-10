@@ -2,7 +2,7 @@ import { Client } from "./types";
 
 export const BASE_PRICE = 25;
 export const LATE_PRICE = 35;
-export const GRACE_DAYS = 15;
+export const GRACE_DAYS = 20;
 export const TRIMESTER_MONTHS = 3;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -22,14 +22,21 @@ export function trimesterEnd(trimesterStart: string): Date {
   return end;
 }
 
-/** Amount owed for the client's current trimester, based on whether/when they paid. */
-export function amountDue(client: Pick<Client, "trimesterStart" | "paid" | "paidAt">): number {
+/** Fee for just the current trimester (excludes any carried-over debt), based on whether/when they paid. */
+export function periodAmountDue(client: Pick<Client, "trimesterStart" | "paid" | "paidAt">): number {
   const referenceDate = client.paid && client.paidAt ? client.paidAt : new Date().toISOString();
   const elapsed = daysBetween(client.trimesterStart, referenceDate);
   return elapsed <= GRACE_DAYS ? BASE_PRICE : LATE_PRICE;
 }
 
-/** True once an unpaid client has passed the 15-day grace window (now owes the late price). */
+/** Total amount owed: this trimester's fee plus any debt carried over from unpaid trimesters. */
+export function amountDue(
+  client: Pick<Client, "trimesterStart" | "paid" | "paidAt" | "carriedOver">
+): number {
+  return periodAmountDue(client) + (client.carriedOver ?? 0);
+}
+
+/** True once an unpaid client has passed the 20-day grace window (now owes the late price). */
 export function isLate(client: Pick<Client, "trimesterStart" | "paid">): boolean {
   if (client.paid) return false;
   return daysBetween(client.trimesterStart) > GRACE_DAYS;

@@ -1,9 +1,10 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Client } from "./types";
+import { AppState, Client } from "./types";
 
 let clients: Client[] = [];
+let activeTrimesterId = "";
 let loaded = false;
 let inFlight: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -31,11 +32,13 @@ async function api(path: string, options?: RequestInit) {
   return res.status === 204 ? null : res.json();
 }
 
-function fetchClients(): Promise<void> {
+function fetchState(): Promise<void> {
   if (!inFlight) {
-    inFlight = api("/api/clients")
+    inFlight = api("/api/state")
       .then((data) => {
-        clients = data as Client[];
+        const state = data as AppState;
+        clients = state.clients;
+        activeTrimesterId = state.activeTrimesterId;
         loaded = true;
         emit();
       })
@@ -48,7 +51,7 @@ function fetchClients(): Promise<void> {
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  if (!loaded) fetchClients();
+  if (!loaded) fetchState();
   return () => listeners.delete(listener);
 }
 
@@ -64,12 +67,20 @@ function getLoaded(): boolean {
   return loaded;
 }
 
+function getActiveTrimesterId(): string {
+  return activeTrimesterId;
+}
+
 export function useClients(): Client[] {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export function useClientsLoaded(): boolean {
   return useSyncExternalStore(subscribe, getLoaded, () => false);
+}
+
+export function useActiveTrimesterId(): string {
+  return useSyncExternalStore(subscribe, getActiveTrimesterId, () => "");
 }
 
 export async function addClient(input: {
@@ -103,18 +114,20 @@ export async function deleteClient(id: string): Promise<void> {
 }
 
 export function markPaid(id: string): Promise<void> {
-  return updateClient(id, { paid: true, paidAt: new Date().toISOString() });
+  return updateClient(id, { paid: true, paidAt: new Date().toISOString(), carriedOver: 0 });
 }
 
 export function markUnpaid(id: string): Promise<void> {
   return updateClient(id, { paid: false, paidAt: null });
 }
 
-/** Starts a fresh trimester cycle for the client (e.g. after renewal). */
-export function renewTrimester(id: string): Promise<void> {
-  return updateClient(id, {
-    trimesterStart: new Date().toISOString(),
-    paid: false,
-    paidAt: null,
-  });
+/** Switches the app's active trimester. Unpaid clients carry their owed amount forward. */
+export async function switchTrimester(trimesterId: string): Promise<void> {
+  const state = (await api("/api/trimester", {
+    method: "POST",
+    body: JSON.stringify({ trimesterId }),
+  })) as AppState;
+  clients = state.clients;
+  activeTrimesterId = state.activeTrimesterId;
+  emit();
 }

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useClients, useClientsLoaded } from "@/lib/store";
-import { amountDue, paymentStatus } from "@/lib/payment";
+import { amountDue, paymentStatus, LATE_PRICE } from "@/lib/payment";
 import { formatDT } from "@/lib/format";
 import StatCard from "@/components/StatCard";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "@/components/ThemeToggle";
+import TrimesterSelector from "@/components/TrimesterSelector";
 
 export default function DashboardPage() {
   const clients = useClients();
@@ -38,9 +39,7 @@ export default function DashboardPage() {
 
   const attention = useMemo(
     () =>
-      clients
-        .filter((c) => paymentStatus(c) === "late")
-        .sort((a, b) => a.trimesterStart.localeCompare(b.trimesterStart)),
+      clients.filter((c) => paymentStatus(c) === "late").sort((a, b) => a.name.localeCompare(b.name)),
     [clients]
   );
 
@@ -59,6 +58,10 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      <div className="mb-6">
+        <TrimesterSelector />
+      </div>
+
       <section className="grid grid-cols-2 gap-3">
         <StatCard label="Paid" value={String(stats.paidCount)} tone="success" />
         <StatCard label="Unpaid" value={String(stats.unpaidCount)} tone={stats.unpaidCount > 0 ? "danger" : "default"} />
@@ -66,7 +69,7 @@ export default function DashboardPage() {
         <StatCard
           label="Outstanding"
           value={formatDT(stats.unpaidAmount)}
-          sub={stats.lateCount > 0 ? `${stats.lateCount} overdue (35 DT)` : "still on time"}
+          sub={stats.lateCount > 0 ? `${stats.lateCount} overdue (${LATE_PRICE} DT)` : "still on time"}
           tone={stats.unpaidAmount > 0 ? "warning" : "default"}
         />
       </section>

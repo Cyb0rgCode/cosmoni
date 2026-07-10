@@ -10,13 +10,13 @@ export default function ClientCard({
   onEdit,
   onDelete,
   onTogglePaid,
-  onRenew,
+  onMarkUnpaid,
 }: {
   client: Client;
   onEdit: () => void;
   onDelete: () => void;
   onTogglePaid: () => void;
-  onRenew: () => void;
+  onMarkUnpaid: () => void;
 }) {
   const status = paymentStatus(client);
   const due = amountDue(client);
@@ -66,6 +66,11 @@ export default function ClientCard({
               ? "overdue — late rate applied"
               : `due in ${remaining} day${remaining === 1 ? "" : "s"}`}
           </p>
+          {client.carriedOver > 0 && (
+            <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
+              includes {formatDT(client.carriedOver)} carried over
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <IconButton label="Edit" onClick={onEdit}>
@@ -79,10 +84,10 @@ export default function ClientCard({
 
       {status === "paid" ? (
         <button
-          onClick={onRenew}
+          onClick={onMarkUnpaid}
           className="rounded-xl border border-black/10 py-2 text-sm font-medium text-zinc-700 dark:border-white/10 dark:text-zinc-300"
         >
-          Start new trimester
+          Undo — mark unpaid
         </button>
       ) : (
         <button
