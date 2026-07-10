@@ -54,5 +54,5 @@ Push this repo to GitHub and import it in [Vercel](https://vercel.com/new), then
 ## Data & security notes
 
 - All client data (name, phone, Instagram, payment status) is stored as a single JSON blob in Vercel Blob, read/written by server-side API routes — the browser never talks to Blob directly.
-- The blob is stored with `access: "public"`, meaning anyone with its exact URL could read it — but that URL is never exposed to the client and lives on a per-project random subdomain, so it isn't discoverable in practice. Don't share the blob URL if you ever look it up in the Vercel dashboard.
+- The blob is stored with `access: "private"`, so it requires the `BLOB_READ_WRITE_TOKEN` to read — it isn't reachable via a bare URL even if leaked.
 - Login uses a single shared password (no individual accounts) and an HTTP-only session cookie valid for 30 days. This is meant for personal/single-operator use, not a multi-user product.
