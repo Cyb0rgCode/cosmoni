@@ -1,26 +1,37 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useActiveTrimesterId, switchTrimester } from "@/lib/store";
-import { currentTrimesterId, nearbyTrimesterIds, trimesterFromId } from "@/lib/trimester";
+import { useActiveTrimesterId, useLatestTrimesterId, switchTrimester } from "@/lib/store";
+import { currentTrimesterId, nearbyTrimesterIds, trimesterFromId, trimesterDistance } from "@/lib/trimester";
 
 export default function TrimesterSelector() {
   const activeTrimesterId = useActiveTrimesterId();
+  const latestTrimesterId = useLatestTrimesterId();
   const [switching, setSwitching] = useState(false);
   const today = currentTrimesterId();
 
   const options = useMemo(() => {
     if (!activeTrimesterId) return [];
-    return nearbyTrimesterIds(today, 3, 1, activeTrimesterId).map((id) => trimesterFromId(id));
-  }, [activeTrimesterId, today]);
+    return nearbyTrimesterIds(today, 5, 1, [activeTrimesterId, latestTrimesterId]).map((id) =>
+      trimesterFromId(id)
+    );
+  }, [activeTrimesterId, latestTrimesterId, today]);
 
   async function handleSwitch(nextId: string) {
     if (!nextId || nextId === activeTrimesterId) return;
-    const label = trimesterFromId(nextId).label;
-    const confirmed = confirm(
-      `Switch the active trimester to ${label}?\n\nEvery client still marked unpaid will carry their owed amount into the new trimester (compounding with the new period's fee). Paid clients reset to unpaid for the new period.`
-    );
-    if (!confirmed) return;
+
+    // Advancing beyond the frontier creates new data and needs confirmation.
+    // Switching to an already-recorded trimester is just a view — nothing to confirm.
+    if (nextId > latestTrimesterId) {
+      const steps = trimesterDistance(latestTrimesterId, nextId);
+      const label = trimesterFromId(nextId).label;
+      const confirmed = confirm(
+        steps > 1
+          ? `Advance ${steps} trimesters to ${label}?\n\nAt each step, clients still unpaid carry a flat 35 DT penalty forward, stacking with anything already owed.`
+          : `Start the ${label} trimester?\n\nClients still unpaid when ${trimesterFromId(latestTrimesterId).label} closes carry a flat 35 DT penalty into this new trimester, on top of anything already owed.`
+      );
+      if (!confirmed) return;
+    }
 
     setSwitching(true);
     try {
@@ -34,14 +45,15 @@ export default function TrimesterSelector() {
 
   if (!activeTrimesterId) return null;
 
-  const isBehind = activeTrimesterId !== today;
+  const viewingHistory = activeTrimesterId !== latestTrimesterId;
+  const isBehindToday = activeTrimesterId !== today;
 
   return (
     <div className="rounded-2xl border border-black/10 p-4 dark:border-white/10">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Active trimester
+            {viewingHistory ? "Viewing history" : "Active trimester"}
           </p>
           <p className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             {trimesterFromId(activeTrimesterId).label}
@@ -56,12 +68,23 @@ export default function TrimesterSelector() {
           {options.map((t) => (
             <option key={t.id} value={t.id} className="text-zinc-900">
               {t.label}
+              {t.id > latestTrimesterId ? " (new)" : ""}
             </option>
           ))}
         </select>
       </div>
 
-      {isBehind && (
+      {viewingHistory && (
+        <button
+          onClick={() => handleSwitch(latestTrimesterId)}
+          disabled={switching}
+          className="mt-3 text-xs font-medium text-indigo-600 disabled:opacity-60 dark:text-indigo-400"
+        >
+          → Back to {trimesterFromId(latestTrimesterId).label} (current)
+        </button>
+      )}
+
+      {!viewingHistory && isBehindToday && (
         <button
           onClick={() => handleSwitch(today)}
           disabled={switching}

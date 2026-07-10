@@ -10,6 +10,9 @@ export interface Trimester {
   end: Date;
 }
 
+/** The ledger never tracks anything before this trimester — tracking starts July 2026. */
+export const EPOCH_TRIMESTER_ID = "2026-07";
+
 /** The trimester cycle anchors on July: Jul-Sep, Oct-Dec, Jan-Mar, Apr-Jun. */
 function trimesterStartForDate(date: Date): Date {
   const month = date.getMonth();
@@ -57,14 +60,32 @@ export function shiftTrimesterId(id: string, steps: number): string {
   return formatId(addMonths(parseId(id), steps * 3));
 }
 
-/** Returns nearby trimester ids centered on `centerId`, oldest first. Always includes `extraId` if given. */
-export function nearbyTrimesterIds(centerId: string, before: number, after: number, extraId?: string): string[] {
+/** Number of trimester steps from `fromId` to `toId` (positive if `toId` is later). */
+export function trimesterDistance(fromId: string, toId: string): number {
+  const from = parseId(fromId);
+  const to = parseId(toId);
+  const months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+  return Math.round(months / 3);
+}
+
+/**
+ * Returns nearby trimester ids centered on `centerId`, oldest first, clamped to never
+ * predate EPOCH_TRIMESTER_ID. Always includes any ids in `extraIds`.
+ */
+export function nearbyTrimesterIds(
+  centerId: string,
+  before: number,
+  after: number,
+  extraIds: string[] = []
+): string[] {
   const ids: string[] = [];
   for (let i = -before; i <= after; i++) {
     ids.push(shiftTrimesterId(centerId, i));
   }
-  if (extraId && !ids.includes(extraId)) {
-    ids.push(extraId);
+  for (const extra of extraIds) {
+    if (extra && !ids.includes(extra)) ids.push(extra);
   }
-  return Array.from(new Set(ids)).sort();
+  return Array.from(new Set(ids))
+    .filter((id) => id >= EPOCH_TRIMESTER_ID)
+    .sort();
 }

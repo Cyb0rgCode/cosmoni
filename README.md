@@ -10,9 +10,9 @@ A simple installable PWA for tracking clients and their trimester payments. Buil
 - Track per client: name, post/role, phone number, Instagram username, and payment status.
 - **Sorting**: sort the client list by name (A–Z/Z–A), amount due, status (overdue first), or date added.
 - **Posts**: pick a client's post from a managed list (seeded with common committee roles), with an in-form "Manage" screen to add or delete posts from that list.
-- **Trimester cycle**: billing periods run Jul–Sep, Oct–Dec, Jan–Mar, Apr–Jun (anchored on July). The Dashboard shows the active trimester with a selector to switch to a nearby one.
-- **Pricing logic**: 25 DT per trimester. If a client hasn't paid within 20 days of the trimester start, the rate becomes 35 DT.
-- **Compounding penalty**: switching to a new trimester resets everyone to unpaid, but any client who was still unpaid carries their full owed amount (fee + prior carry-over) into the new trimester, stacking on top of that period's fee. Paying in full clears the carry-over.
+- **Trimester ledger**: billing periods run Jul–Sep, Oct–Dec, Jan–Mar, Apr–Jun (tracking starts July 2026). Each trimester keeps its **own independent record** of who paid — switching to view an earlier trimester never recalculates or changes it, it's a pure read of what actually happened.
+- **Pricing logic**: 25 DT per trimester. If a client hasn't paid within 20 days of that trimester's start, the rate becomes 35 DT.
+- **Compounding penalty**: advancing to a *new* trimester (one that hasn't happened yet) is the only time anything is calculated. Anyone still unpaid when the closing trimester ends carries a flat 35 DT penalty into the new one, stacking with any earlier unpaid balance, on top of the new trimester's own 25/35 DT fee. Paying in full resets that client's carry-over to 0. New clients are only ever added to the current trimester going forward — they don't retroactively appear in past ones. Past trimester records can still be corrected (e.g. fixing a missed "mark as paid"), but corrections never ripple forward into later trimesters' totals.
 - **PWA**: installable on mobile home screens, with an app-shell service worker for fast loads.
 - **Cloud storage**: all client records live in a single JSON file in Vercel Blob — no localStorage, accessible from any device.
 

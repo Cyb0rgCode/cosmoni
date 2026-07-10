@@ -19,6 +19,9 @@ export type ClientInput = Pick<Client, "name" | "post" | "phone" | "instagram">;
 
 export interface AppState {
   activeTrimesterId: string;
+  /** The most recently opened trimester — the frontier. `activeTrimesterId` may be behind it (viewing history). */
+  latestTrimesterId: string;
+  /** Clients merged with their payment record for `activeTrimesterId`. */
   clients: Client[];
   posts: string[];
 }

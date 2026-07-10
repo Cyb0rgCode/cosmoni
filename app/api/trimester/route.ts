@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readState, writeState } from "@/lib/blob-store";
-import { isValidTrimesterId, trimesterFromId } from "@/lib/trimester";
-import { amountDue } from "@/lib/payment";
+import { readRawState, writeRawState, mergeForTrimester, advanceLedger } from "@/lib/blob-store";
+import { isValidTrimesterId } from "@/lib/trimester";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as { trimesterId?: string } | null;
@@ -11,26 +10,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid trimester id" }, { status: 400 });
   }
 
-  const state = await readState();
-  if (trimesterId === state.activeTrimesterId) {
-    return NextResponse.json(state);
+  const state = await readRawState();
+
+  if (state.trimesters[trimesterId]) {
+    // Already recorded — this is a pure view switch. Nothing is recalculated or overwritten.
+    state.activeTrimesterId = trimesterId;
+  } else if (trimesterId < state.latestTrimesterId) {
+    return NextResponse.json(
+      { error: "This trimester is before the tracked history and can't be created" },
+      { status: 400 }
+    );
+  } else {
+    advanceLedger(state, trimesterId, new Date().toISOString());
   }
 
-  const newStart = trimesterFromId(trimesterId).start.toISOString();
-  const now = new Date().toISOString();
+  await writeRawState(state);
 
-  // Clients who stayed unpaid carry their full owed amount (fee + any prior carry-over)
-  // into the new trimester, stacking on top of whatever that new trimester charges.
-  state.clients = state.clients.map((client) => ({
-    ...client,
-    trimesterStart: newStart,
-    paid: false,
-    paidAt: null,
-    carriedOver: client.paid ? 0 : amountDue(client),
-    updatedAt: now,
-  }));
-  state.activeTrimesterId = trimesterId;
-
-  await writeState(state);
-  return NextResponse.json(state);
+  return NextResponse.json({
+    activeTrimesterId: state.activeTrimesterId,
+    latestTrimesterId: state.latestTrimesterId,
+    posts: state.posts,
+    clients: mergeForTrimester(state, state.activeTrimesterId),
+  });
 }

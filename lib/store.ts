@@ -1,10 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { AppState, Client } from "./types";
+import { AppState, Client, ClientInput } from "./types";
 
 let clients: Client[] = [];
 let activeTrimesterId = "";
+let latestTrimesterId = "";
 let posts: string[] = [];
 let loaded = false;
 let inFlight: Promise<void> | null = null;
@@ -33,14 +34,18 @@ async function api(path: string, options?: RequestInit) {
   return res.status === 204 ? null : res.json();
 }
 
+function applyState(state: AppState) {
+  clients = state.clients;
+  activeTrimesterId = state.activeTrimesterId;
+  latestTrimesterId = state.latestTrimesterId;
+  posts = state.posts;
+}
+
 function fetchState(): Promise<void> {
   if (!inFlight) {
     inFlight = api("/api/state")
       .then((data) => {
-        const state = data as AppState;
-        clients = state.clients;
-        activeTrimesterId = state.activeTrimesterId;
-        posts = state.posts;
+        applyState(data as AppState);
         loaded = true;
         emit();
       })
@@ -73,6 +78,10 @@ function getActiveTrimesterId(): string {
   return activeTrimesterId;
 }
 
+function getLatestTrimesterId(): string {
+  return latestTrimesterId;
+}
+
 function getPosts(): string[] {
   return posts;
 }
@@ -89,31 +98,42 @@ export function useActiveTrimesterId(): string {
   return useSyncExternalStore(subscribe, getActiveTrimesterId, () => "");
 }
 
+export function useLatestTrimesterId(): string {
+  return useSyncExternalStore(subscribe, getLatestTrimesterId, () => "");
+}
+
+/** True once loaded and the user is viewing an earlier trimester rather than the current one. */
+export function useIsViewingHistory(): boolean {
+  const active = useActiveTrimesterId();
+  const latest = useLatestTrimesterId();
+  return Boolean(active && latest && active !== latest);
+}
+
 const EMPTY_POSTS: string[] = [];
 
 export function usePosts(): string[] {
   return useSyncExternalStore(subscribe, getPosts, () => EMPTY_POSTS);
 }
 
-export async function addClient(input: {
-  name: string;
-  post: string;
-  phone: string;
-  instagram: string;
-}): Promise<Client> {
+export async function addClient(input: ClientInput): Promise<Client> {
   const client = (await api("/api/clients", {
     method: "POST",
     body: JSON.stringify(input),
   })) as Client;
-  clients = [client, ...clients];
-  emit();
+  // New clients always land in the latest trimester; only splice into the visible
+  // list if that's what's currently being viewed.
+  if (activeTrimesterId === latestTrimesterId) {
+    clients = [client, ...clients];
+    emit();
+  }
   return client;
 }
 
-export async function updateClient(id: string, patch: Partial<Client>): Promise<void> {
+/** Edits a client's profile fields (name, post, phone, instagram) — shared across all trimesters. */
+export async function updateClient(id: string, input: ClientInput): Promise<void> {
   const updated = (await api(`/api/clients/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(patch),
+    body: JSON.stringify({ profile: input }),
   })) as Client;
   clients = clients.map((c) => (c.id === id ? updated : c));
   emit();
@@ -125,12 +145,24 @@ export async function deleteClient(id: string): Promise<void> {
   emit();
 }
 
+async function updatePayment(
+  id: string,
+  payment: { paid?: boolean; paidAt?: string | null; carriedOver?: number }
+): Promise<void> {
+  const updated = (await api(`/api/clients/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ trimesterId: activeTrimesterId, payment }),
+  })) as Client;
+  clients = clients.map((c) => (c.id === id ? updated : c));
+  emit();
+}
+
 export function markPaid(id: string): Promise<void> {
-  return updateClient(id, { paid: true, paidAt: new Date().toISOString(), carriedOver: 0 });
+  return updatePayment(id, { paid: true, paidAt: new Date().toISOString(), carriedOver: 0 });
 }
 
 export function markUnpaid(id: string): Promise<void> {
-  return updateClient(id, { paid: false, paidAt: null });
+  return updatePayment(id, { paid: false, paidAt: null });
 }
 
 export async function addPost(name: string): Promise<void> {
@@ -151,13 +183,16 @@ export async function deletePost(name: string): Promise<void> {
   emit();
 }
 
-/** Switches the app's active trimester. Unpaid clients carry their owed amount forward. */
+/**
+ * Switches which trimester is being viewed. If it's already recorded, this is a pure
+ * view change — nothing is recalculated. If it's beyond the latest trimester, unpaid
+ * clients carry a flat late fee forward as the ledger advances to it.
+ */
 export async function switchTrimester(trimesterId: string): Promise<void> {
   const state = (await api("/api/trimester", {
     method: "POST",
     body: JSON.stringify({ trimesterId }),
   })) as AppState;
-  clients = state.clients;
-  activeTrimesterId = state.activeTrimesterId;
+  applyState(state);
   emit();
 }

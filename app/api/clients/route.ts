@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { readState, writeState } from "@/lib/blob-store";
-import { trimesterFromId } from "@/lib/trimester";
-import { Client, ClientInput } from "@/lib/types";
+import { readRawState, writeRawState, mergeForTrimester } from "@/lib/blob-store";
+import { ClientInput } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   const input = (await request.json().catch(() => null)) as Partial<ClientInput> | null;
@@ -11,23 +10,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const state = await readState();
+  const state = await readRawState();
   const now = new Date().toISOString();
-  const client: Client = {
-    id: randomUUID(),
-    name: input.name.trim(),
-    post: input.post?.trim() ?? "",
-    phone: input.phone?.trim() ?? "",
-    instagram: (input.instagram ?? "").trim().replace(/^@/, ""),
-    trimesterStart: trimesterFromId(state.activeTrimesterId).start.toISOString(),
-    paid: false,
-    paidAt: null,
-    carriedOver: 0,
-    createdAt: now,
-    updatedAt: now,
+  const id = randomUUID();
+
+  state.clients = [
+    {
+      id,
+      name: input.name.trim(),
+      post: input.post?.trim() ?? "",
+      phone: input.phone?.trim() ?? "",
+      instagram: (input.instagram ?? "").trim().replace(/^@/, ""),
+      createdAt: now,
+      updatedAt: now,
+    },
+    ...state.clients,
+  ];
+
+  const latest = state.latestTrimesterId;
+  state.trimesters[latest] = {
+    ...(state.trimesters[latest] ?? {}),
+    [id]: { paid: false, paidAt: null, carriedOver: 0, updatedAt: now },
   };
 
-  state.clients = [client, ...state.clients];
-  await writeState(state);
-  return NextResponse.json(client, { status: 201 });
+  await writeRawState(state);
+
+  const merged = mergeForTrimester(state, latest).find((c) => c.id === id)!;
+  return NextResponse.json(merged, { status: 201 });
 }

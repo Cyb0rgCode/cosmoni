@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   useClients,
   useClientsLoaded,
+  useIsViewingHistory,
   addClient,
   updateClient,
   deleteClient,
@@ -29,6 +30,7 @@ function reportError(error: unknown) {
 export default function ClientsPage() {
   const clients = useClients();
   const loaded = useClientsLoaded();
+  const viewingHistory = useIsViewingHistory();
   const [view, setView] = useState<ViewMode>("card");
   const [filter, setFilter] = useState<Filter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name-asc");
@@ -92,14 +94,22 @@ export default function ClientsPage() {
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Clients</h1>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white"
-          >
-            <PlusIcon /> Add
-          </button>
+          {!viewingHistory && (
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white"
+            >
+              <PlusIcon /> Add
+            </button>
+          )}
         </div>
       </header>
+
+      {viewingHistory && (
+        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3.5 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+          Viewing a past trimester — this is historical data. New clients can only be added to the current trimester.
+        </div>
+      )}
 
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readState, writeState } from "@/lib/blob-store";
+import { readRawState, writeRawState } from "@/lib/blob-store";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as { name?: string } | null;
@@ -9,10 +9,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Post name is required" }, { status: 400 });
   }
 
-  const state = await readState();
+  const state = await readRawState();
   if (!state.posts.some((p) => p.toLowerCase() === name.toLowerCase())) {
     state.posts = [...state.posts, name];
-    await writeState(state);
+    await writeRawState(state);
   }
 
   return NextResponse.json({ posts: state.posts });
@@ -26,9 +26,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Post name is required" }, { status: 400 });
   }
 
-  const state = await readState();
+  const state = await readRawState();
   state.posts = state.posts.filter((p) => p !== name);
-  await writeState(state);
+  await writeRawState(state);
 
   return NextResponse.json({ posts: state.posts });
 }
