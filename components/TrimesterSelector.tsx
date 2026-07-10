@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useActiveTrimesterId, useLatestTrimesterId, switchTrimester } from "@/lib/store";
 import {
   currentTrimesterId,
+  shiftTrimesterId,
   trimesterDistance,
   trimesterFromId,
   trimesterRange,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/trimester";
 
 const VISIBLE_COUNT = 4;
+const FUTURE_COUNT = 3;
 
 export default function TrimesterSelector() {
   const activeTrimesterId = useActiveTrimesterId();
@@ -25,8 +27,13 @@ export default function TrimesterSelector() {
     return trimesterRange(EPOCH_TRIMESTER_ID, latestTrimesterId);
   }, [latestTrimesterId]);
 
+  const future = useMemo(() => {
+    if (!latestTrimesterId) return [];
+    return trimesterRange(shiftTrimesterId(latestTrimesterId, 1), shiftTrimesterId(latestTrimesterId, FUTURE_COUNT));
+  }, [latestTrimesterId]);
+
   const hasMore = history.length > VISIBLE_COUNT;
-  const visible = showAll ? history : history.slice(-VISIBLE_COUNT);
+  const visibleHistory = showAll ? history : history.slice(-VISIBLE_COUNT);
 
   async function handleSwitch(nextId: string) {
     if (!nextId || nextId === activeTrimesterId) return;
@@ -57,7 +64,7 @@ export default function TrimesterSelector() {
   if (!activeTrimesterId) return null;
 
   const viewingHistory = activeTrimesterId !== latestTrimesterId;
-  const isBehindToday = activeTrimesterId !== today;
+  const todayBeyondShown = future.length > 0 ? today > future[future.length - 1] : today > latestTrimesterId;
 
   return (
     <div className="rounded-2xl border border-black/10 p-4 dark:border-white/10">
@@ -78,7 +85,7 @@ export default function TrimesterSelector() {
             {showAll ? "Less" : "More"}
           </button>
         )}
-        {visible.map((id) => (
+        {visibleHistory.map((id) => (
           <button
             key={id}
             type="button"
@@ -93,6 +100,17 @@ export default function TrimesterSelector() {
             {trimesterShortLabel(id)}
           </button>
         ))}
+        {future.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => handleSwitch(id)}
+            disabled={switching}
+            className="rounded-full border border-dashed border-black/15 px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition-colors disabled:opacity-60 dark:border-white/15 dark:text-zinc-500"
+          >
+            + {trimesterShortLabel(id)}
+          </button>
+        ))}
       </div>
 
       {viewingHistory && (
@@ -105,7 +123,7 @@ export default function TrimesterSelector() {
         </button>
       )}
 
-      {!viewingHistory && isBehindToday && (
+      {!viewingHistory && todayBeyondShown && (
         <button
           onClick={() => handleSwitch(today)}
           disabled={switching}
