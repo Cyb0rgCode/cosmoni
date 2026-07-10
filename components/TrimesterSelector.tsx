@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useActiveTrimesterId, useLatestTrimesterId, useTodayTrimesterId, switchTrimester } from "@/lib/store";
+import {
+  useActiveTrimesterId,
+  useLatestTrimesterId,
+  useTodayTrimesterId,
+  switchTrimester,
+  resetToToday,
+} from "@/lib/store";
 import {
   shiftTrimesterId,
   trimesterFromId,
@@ -46,10 +52,27 @@ export default function TrimesterSelector() {
     }
   }
 
+  async function handleReset() {
+    const confirmed = confirm(
+      `The active trimester (${trimesterFromId(latestTrimesterId).label}) is ahead of today (${trimesterFromId(today).label}).\n\nReset back to today? This discards any trimester(s) created past today.`
+    );
+    if (!confirmed) return;
+
+    setSwitching(true);
+    try {
+      await resetToToday();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to reset");
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   if (!activeTrimesterId) return null;
 
   const viewingHistory = activeTrimesterId !== latestTrimesterId;
-  const todayBeyondShown = future.length > 0 ? today > future[future.length - 1] : today > latestTrimesterId;
+  const isAheadOfToday = today !== "" && latestTrimesterId > today;
+  const todayBeyondShown = !isAheadOfToday && (future.length > 0 ? today > future[future.length - 1] : today > latestTrimesterId);
 
   return (
     <div className="rounded-2xl border border-black/10 p-4 dark:border-white/10">
@@ -70,7 +93,7 @@ export default function TrimesterSelector() {
             {showAll ? "Less" : "More"}
           </button>
         )}
-        {visibleHistory.map((id) => (
+        {[...visibleHistory, ...future].map((id) => (
           <button
             key={id}
             type="button"
@@ -85,17 +108,6 @@ export default function TrimesterSelector() {
             {trimesterShortLabel(id)}
           </button>
         ))}
-        {future.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => handleSwitch(id)}
-            disabled={switching}
-            className="rounded-full border border-dashed border-black/15 px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition-colors disabled:opacity-60 dark:border-white/15 dark:text-zinc-500"
-          >
-            + {trimesterShortLabel(id)}
-          </button>
-        ))}
       </div>
 
       {viewingHistory && (
@@ -105,6 +117,16 @@ export default function TrimesterSelector() {
           className="mt-3 text-xs font-medium text-indigo-600 disabled:opacity-60 dark:text-indigo-400"
         >
           → Back to {trimesterFromId(latestTrimesterId).label} (current)
+        </button>
+      )}
+
+      {!viewingHistory && isAheadOfToday && (
+        <button
+          onClick={handleReset}
+          disabled={switching}
+          className="mt-3 text-xs font-medium text-amber-600 disabled:opacity-60 dark:text-amber-400"
+        >
+          ⚠ Ahead of today ({trimesterFromId(today).label}) — reset to today
         </button>
       )}
 

@@ -208,6 +208,17 @@ export async function switchTrimester(trimesterId: string): Promise<void> {
   emit();
 }
 
+/**
+ * Rolls the ledger's frontier back to today, discarding any trimester records created past
+ * it (e.g. from accidental future-trimester taps). If today is instead ahead of the frontier,
+ * this just advances forward to it, same as switchTrimester would.
+ */
+export async function resetToToday(): Promise<void> {
+  const state = (await api("/api/trimester/reset", { method: "POST" })) as AppState;
+  applyState(state);
+  emit();
+}
+
 /** Replaces all data (clients, payment history, posts) with the contents of a backup file. */
 export async function importData(data: unknown): Promise<void> {
   await api("/api/import", { method: "POST", body: JSON.stringify(data) });

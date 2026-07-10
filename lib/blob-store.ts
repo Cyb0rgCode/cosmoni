@@ -177,3 +177,26 @@ export function advanceLedger(state: RawAppState, targetId: string, now: string)
   state.latestTrimesterId = cursor;
   state.activeTrimesterId = cursor;
 }
+
+/**
+ * Syncs the ledger's frontier to `todayId`. If the frontier has overshot today (e.g. from
+ * accidental future-trimester taps), this rolls it back and discards the trimester records
+ * created past today — `todayId` itself is untouched since the ledger is always contiguous
+ * from the epoch, so it already exists. If today is instead ahead of the frontier, this just
+ * advances forward as normal.
+ */
+export function resetToToday(state: RawAppState, todayId: string, now: string): void {
+  if (todayId === state.latestTrimesterId) {
+    state.activeTrimesterId = todayId;
+    return;
+  }
+  if (todayId > state.latestTrimesterId) {
+    advanceLedger(state, todayId, now);
+    return;
+  }
+  for (const id of Object.keys(state.trimesters)) {
+    if (id > todayId) delete state.trimesters[id];
+  }
+  state.latestTrimesterId = todayId;
+  state.activeTrimesterId = todayId;
+}
