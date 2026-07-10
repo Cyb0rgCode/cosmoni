@@ -7,6 +7,7 @@ import { amountDue, paymentStatus } from "@/lib/payment";
 import { formatDT } from "@/lib/format";
 import StatCard from "@/components/StatCard";
 import LogoutButton from "@/components/LogoutButton";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function DashboardPage() {
   const clients = useClients();
@@ -52,7 +53,10 @@ export default function DashboardPage() {
             {loaded ? `${clients.length} client${clients.length === 1 ? "" : "s"} total` : "Loading..."}
           </p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <LogoutButton />
+        </div>
       </header>
 
       <section className="grid grid-cols-2 gap-3">

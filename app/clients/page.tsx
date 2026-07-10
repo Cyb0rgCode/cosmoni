@@ -15,6 +15,7 @@ import { Client, ClientInput } from "@/lib/types";
 import ClientCard from "@/components/ClientCard";
 import ClientListRow from "@/components/ClientListRow";
 import ClientFormModal from "@/components/ClientFormModal";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type ViewMode = "card" | "list";
 type Filter = "all" | "unpaid" | "paid";
@@ -86,12 +87,15 @@ export default function ClientsPage() {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-8 pt-6 sm:px-6">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Clients</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white"
-        >
-          <PlusIcon /> Add
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white"
+          >
+            <PlusIcon /> Add
+          </button>
+        </div>
       </header>
 
       <div className="mb-3 flex items-center gap-2">

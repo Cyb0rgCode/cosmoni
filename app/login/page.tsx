@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function LoginForm() {
   const router = useRouter();
@@ -65,7 +66,10 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 items-center justify-center px-4">
+    <main className="relative flex flex-1 items-center justify-center px-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <Suspense fallback={null}>
         <LoginForm />
       </Suspense>
