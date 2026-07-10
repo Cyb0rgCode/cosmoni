@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useActiveTrimesterId, useLatestTrimesterId, switchTrimester } from "@/lib/store";
+import { useActiveTrimesterId, useLatestTrimesterId, useTodayTrimesterId, switchTrimester } from "@/lib/store";
 import {
-  currentTrimesterId,
   shiftTrimesterId,
   trimesterDistance,
   trimesterFromId,
@@ -18,9 +17,9 @@ const FUTURE_COUNT = 3;
 export default function TrimesterSelector() {
   const activeTrimesterId = useActiveTrimesterId();
   const latestTrimesterId = useLatestTrimesterId();
+  const today = useTodayTrimesterId();
   const [switching, setSwitching] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const today = currentTrimesterId();
 
   const history = useMemo(() => {
     if (!latestTrimesterId) return [];

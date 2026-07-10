@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readRawState, writeRawState, mergeForTrimester, advanceLedger } from "@/lib/blob-store";
-import { isValidTrimesterId } from "@/lib/trimester";
+import { currentTrimesterId, isValidTrimesterId } from "@/lib/trimester";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as { trimesterId?: string } | null;
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     activeTrimesterId: state.activeTrimesterId,
     latestTrimesterId: state.latestTrimesterId,
+    todayTrimesterId: currentTrimesterId(),
     posts: state.posts,
     clients: mergeForTrimester(state, state.activeTrimesterId),
   });

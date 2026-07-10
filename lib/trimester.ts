@@ -44,7 +44,19 @@ export function trimesterFromId(id: string): Trimester {
   return { id, start, end, label };
 }
 
-export function currentTrimesterId(date: Date = new Date()): string {
+/** The org's actual calendar date right now, in its own timezone (Tunisia, UTC+1, no DST). */
+export function orgNow(): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Tunis",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  return new Date(get("year"), get("month") - 1, get("day"));
+}
+
+export function currentTrimesterId(date: Date = orgNow()): string {
   return formatId(trimesterStartForDate(date));
 }
 

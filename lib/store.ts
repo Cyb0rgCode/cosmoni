@@ -6,6 +6,7 @@ import { AppState, Client, ClientInput } from "./types";
 let clients: Client[] = [];
 let activeTrimesterId = "";
 let latestTrimesterId = "";
+let todayTrimesterId = "";
 let posts: string[] = [];
 let loaded = false;
 let inFlight: Promise<void> | null = null;
@@ -38,6 +39,7 @@ function applyState(state: AppState) {
   clients = state.clients;
   activeTrimesterId = state.activeTrimesterId;
   latestTrimesterId = state.latestTrimesterId;
+  todayTrimesterId = state.todayTrimesterId;
   posts = state.posts;
 }
 
@@ -82,6 +84,10 @@ function getLatestTrimesterId(): string {
   return latestTrimesterId;
 }
 
+function getTodayTrimesterId(): string {
+  return todayTrimesterId;
+}
+
 function getPosts(): string[] {
   return posts;
 }
@@ -100,6 +106,11 @@ export function useActiveTrimesterId(): string {
 
 export function useLatestTrimesterId(): string {
   return useSyncExternalStore(subscribe, getLatestTrimesterId, () => "");
+}
+
+/** The trimester containing today's actual date — fetched from the server, not the client clock. */
+export function useTodayTrimesterId(): string {
+  return useSyncExternalStore(subscribe, getTodayTrimesterId, () => "");
 }
 
 /** True once loaded and the user is viewing an earlier trimester rather than the current one. */

@@ -21,6 +21,8 @@ export interface AppState {
   activeTrimesterId: string;
   /** The most recently opened trimester — the frontier. `activeTrimesterId` may be behind it (viewing history). */
   latestTrimesterId: string;
+  /** The trimester containing today's actual date, computed server-side so it can't drift from a client's clock/timezone. */
+  todayTrimesterId: string;
   /** Clients merged with their payment record for `activeTrimesterId`. */
   clients: Client[];
   posts: string[];
